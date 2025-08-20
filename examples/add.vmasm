@@ -1,0 +1,8 @@
+; add two numbers and halt
+.text
+.global main
+main:
+    ldi r1, 5
+    ldi r2, 7
+    add r3, r1, r2
+    halt
