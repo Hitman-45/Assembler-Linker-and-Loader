@@ -5,6 +5,27 @@ Assembler Linker and Loader for Computer System Design
 
 This project involves breaking down a problem into a logical flow, implementing it in Python, and then converting it to C++ for better performance and system-level execution. The process is divided into three main parts:
 
+How to run it:
+```
+g++ -std=c++17 -O2 -o vmasm vm_asm.cpp
+./vmasm assemble examples/add.vmasm -o build/abc.vmo
+./vmasm dump build/abc.vmo
+```
+
+### Work Done As of 6th-Sep-2025.
+
+- Removed the outer while(changes != 0) loop → Your code was repeatedly scanning the array, which was unnecessary and could lead to inefficiency. Now, the logic processes collisions in a single pass using a stack.
+
+- Introduced a stack (vector<int> st) → This directly models the collision process: push if no collision, pop if collision, and resolve until stable.
+
+- Handled equal-size collisions (num1 + num2 == 0) → Both asteroids get destroyed correctly, which your code didn’t handle cleanly before.
+
+- Simplified direction check → Only when a positive asteroid is followed by a negative one, collisions are considered. This avoids unnecessary checks.
+
+- Returned the stack as result → Ensures only surviving asteroids are output in the correct order.
+
+- Effect: The modified code runs in O(n) time with a clean stack-based simulation, handles all edge cases (like multiple collisions in a row or equal magnitudes), and produces the correct surviving asteroid configuration.
+
 ### Work Done As of 25th-Aug-2025.
 
 ## Part 1 – Flowchart Design (CS22B034 Lavkush)

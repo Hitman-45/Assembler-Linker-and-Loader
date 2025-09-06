@@ -22,12 +22,13 @@ struct Token {
 
 struct Rule { TKind kind; regex re; };
 
+// REGISTER regex changed to allow 0..31 (r0..r31 or x0..x31) to match parseReg check
 static const vector<Rule> TOKEN_RULES = {
     {TKind::WS,        regex(R"([ \t]+)")},
     {TKind::COMMENT,   regex(R"(;.*)")},
     {TKind::DIRECTIVE, regex(R"(\.[A-Za-z_][A-Za-z0-9_]*)")},
     {TKind::LABEL,     regex(R"([A-Za-z_][A-Za-z0-9_]*:)")},
-    {TKind::REGISTER,  regex(R"((?:r|x)(?:[12]?\d|3[01]|\d)\b)")},
+    {TKind::REGISTER,  regex(R"((?:r|x)(?:[0-9]|[12][0-9]|3[01])\b)")},
     {TKind::HEX,       regex(R"(0x[0-9A-Fa-f]+)")},
     {TKind::BIN,       regex(R"(0b[01]+)")},
     {TKind::INT,       regex(R"(-?\d+)")},
@@ -193,6 +194,16 @@ public:
             // otherwise skip token to avoid infinite loop
             i++;
         }
+
+        // Ensure pending globals that weren't defined become undefined symbols
+        for(const auto &name : pendingGlobals){
+            if(symIndex.count(name)) continue; // defensive
+            Sym s{name, Section::UNDEF, 0u, true};
+            symIndex[name] = symbols.size();
+            symbols.push_back(s);
+        }
+        pendingGlobals.clear();
+
         Result r; r.instrs=move(instrs); r.data=move(data); r.symbols=move(symbols); r.relocs=move(relocs); return r;
     }
 
@@ -205,7 +216,7 @@ private:
     const Token& eat(TKind k){ const Token& t = toks[i]; if(t.kind != k){ ostringstream oss; oss << "Expected " << kindName(k) << ", got " << kindName(t.kind) << " at " << t.line << ":" << t.col; throw runtime_error(oss.str()); } i++; return t; }
     bool maybe(TKind k){ if(at(k)){ eat(k); return true; } return false; }
 
-    uint8_t parseReg(){ const Token& t = eat(TKind::REGISTER); int n = stoi(t.value.substr(1)); if(n < 0 || n > 255) throw runtime_error("register out of range"); return (uint8_t)n; }
+    uint8_t parseReg(){ const Token& t = eat(TKind::REGISTER); int n = stoi(t.value.substr(1)); if(n < 0 || n > 31) throw runtime_error("register out of range (0-31)"); return (uint8_t)n; }
     int32_t parseInt(){ const Token& t = toks[i]; if(t.kind == TKind::HEX){ i++; return (int32_t)stol(t.value, nullptr, 16); } if(t.kind == TKind::BIN){ i++; return (int32_t)stol(t.value.substr(2), nullptr, 2); } if(t.kind == TKind::INT){ i++; return (int32_t)stol(t.value, nullptr, 10); } ostringstream oss; oss << "Expected int at " << t.line << ":" << t.col; throw runtime_error(oss.str()); }
 
     pair<int32_t, optional<string>> parseLabelRef(){ const Token& t = toks[i]; if(t.kind == TKind::IDENT){ i++; return {0, t.value}; } return {parseInt(), nullopt}; }
@@ -258,14 +269,29 @@ private:
         if(low==".word"){
             // .word value (32-bit LE) ; supports reloc to symbol
             if(at(TKind::IDENT)){
-                auto [v,lbl] = parseLabelRef();
-                uint32_t ofs = (uint32_t)data.size();
-                // placeholder
-                data.push_back(0); data.push_back(0); data.push_back(0); data.push_back(0);
-                if(lbl){ relocs.push_back({Section::DATA, ofs, 0, *lbl}); }
-                else { uint32_t u=(uint32_t)v; data.push_back((uint8_t)(u & 0xFF)); data.push_back((uint8_t)((u>>8)&0xFF)); data.push_back((uint8_t)((u>>16)&0xFF)); data.push_back((uint8_t)((u>>24)&0xFF)); }
+                // label -> placeholder + relocation
+                auto [v,lbl] = parseLabelRef(); // we expect lbl for IDENT case
+                if(lbl){
+                    uint32_t ofs = (uint32_t)data.size();
+                    // placeholder 4 bytes
+                    data.push_back(0); data.push_back(0); data.push_back(0); data.push_back(0);
+                    relocs.push_back({Section::DATA, ofs, 0, *lbl});
+                } else {
+                    // defensive fallback (should not happen)
+                    uint32_t u = (uint32_t)v;
+                    data.push_back((uint8_t)(u & 0xFF));
+                    data.push_back((uint8_t)((u>>8)&0xFF));
+                    data.push_back((uint8_t)((u>>16)&0xFF));
+                    data.push_back((uint8_t)((u>>24)&0xFF));
+                }
             }else{
-                int32_t v = parseInt(); uint32_t u=(uint32_t)v; data.push_back((uint8_t)(u & 0xFF)); data.push_back((uint8_t)((u>>8)&0xFF)); data.push_back((uint8_t)((u>>16)&0xFF)); data.push_back((uint8_t)((u>>24)&0xFF));
+                // immediate numeric
+                int32_t v = parseInt();
+                uint32_t u=(uint32_t)v;
+                data.push_back((uint8_t)(u & 0xFF));
+                data.push_back((uint8_t)((u>>8)&0xFF));
+                data.push_back((uint8_t)((u>>16)&0xFF));
+                data.push_back((uint8_t)((u>>24)&0xFF));
             }
             maybe(TKind::NEWLINE); return;
         }
