@@ -1,8 +1,13 @@
-; add two numbers and halt
+.global start
+
 .text
-.global main
-main:
-    ldi r1, 5
-    ldi r2, 7
-    add r3, r1, r2
+start:
+    ldi r1, 0x1000
+    call foo
     halt
+
+.data
+arr:
+    .byte 1,2,3,4
+ptr:
+    .word start     ; will produce a reloc into .data
