@@ -421,3 +421,4 @@ int main(int argc, char** argv){
         }else{ usage(argv[0]); return 1; }
     }catch(const exception& e){ cerr << "Error: " << e.what() << "\n"; return 1; }
 }
+// End of vm_asm.cpp
