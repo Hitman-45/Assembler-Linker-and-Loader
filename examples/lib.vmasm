@@ -1,0 +1,7 @@
+.section .text
+.global addTwo
+
+; int addTwo(int a, int b) -> return a+b
+addTwo:
+    ADD r0, r0, r1    ; r0 = r0 + r1
+    RET
