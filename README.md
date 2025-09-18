@@ -12,6 +12,16 @@ g++ -std=c++17 -O2 -o vmasm vm_asm.cpp
 ./vmasm dump build/abc.vmo
 ```
 
+```
+\\ VMLINKER 
+g++ -std=c++17 -O2 -o vmasm vm_asm.cpp
+g++ -std=c++17 -o vmlink vmlink.cpp
+./vmasm main.vmasm -o main.vmo
+./vmasm lib.vmasm -o lib.vmo
+./vmlink main.vmo lib.vmo -o program.vmc
+./vmrun program.vmc
+```
+
 ### VMLINK
 
 The vmlink tool is responsible for combining multiple assembler-generated object files (.vmo) into a single executable program (.vmc). Each .vmo file contains machine code, a local symbol table, and relocation records for unresolved addresses. When invoked, the linker first reads all input object files and constructs a global symbol table, which maps symbol names to their final addresses in the merged program. It then performs consistency checks, ensuring that no symbol is defined more than once and reporting errors for undefined references. After validation, the linker processes all relocation entries, patching the correct addresses wherever labels or external references were used. Finally, it concatenates the machine code sections from each object file, adjusted with relocations, and writes the resulting binary to a .vmc executable. In essence, vmlink resolves inter-file dependencies, ensures symbol correctness, and produces a single runnable program for the virtual machine environment.
