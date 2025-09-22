@@ -16,11 +16,21 @@ g++ -std=c++17 -O2 -o vmasm vm_asm.cpp
 \\ VMLINKER 
 g++ -std=c++17 -O2 -o vmasm vm_asm.cpp
 g++ -std=c++17 -o vmlink vmlink.cpp
-./vmasm main.vmasm -o main.vmo
-./vmasm lib.vmasm -o lib.vmo
-./vmlink main.vmo lib.vmo -o program.vmc
-./vmrun program.vmc
+./vmasm examples/main.vmasm -o build/main.vmo
+./vmasm examples/lib.vmasm -o build/lib.vmo
+./vmlink -o build/program.vmc build/main.vmo build/lib.vmo
+./vmasm dump build/program.vmc 
 ```
+
+```
+\\VMLOADER
+g++ -std=c++17 vmloader.cpp -o vmloader
+ ./vmloader build/program.vmc
+```
+
+### VMLOADER
+- 22nd Sept Shankhesh, Preet, Lavkush
+Today we focused on compiling and testing our assembler (vmasm) in a bare shell environment without relying on an IDE. We successfully generated a .vmo object file and verified its correctness by dumping its contents into a hexadecimal format. This allowed us to analyze the internal structure of the object file, including the magic number (FOMV), versioning, section sizes, and entry addresses. We also reviewed the logic of how assembly instructions are mapped to binary opcodes and operands, making the .vmo file ready for execution. Understanding the conversion from assembly to machine-level binary was a key step in bridging the gap between source code and executable format. Moving forward, our next major task is implementing the VM Loader (Module 5). The loader will be responsible for reading .vmc files, loading them into virtual memory, and initializing the program counter (PC) at the specified entry point. Additionally, it will provide debugging hooks such as dumping memory contents and tracing execution to aid in testing and debugging. This will complete the flow from assembly to execution within our virtual machine.
 
 ### VMLINK
 
