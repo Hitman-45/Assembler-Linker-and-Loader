@@ -1,9 +1,0 @@
-.section .text
-.global _start
-
-_start:
-    LDI r0, 5         ; load 5 into r0
-    LDI r1, 7         ; load 7 into r1
-    CALL addTwo       ; call function from lib.vmo
-    ; result is now in r0
-    HALT
